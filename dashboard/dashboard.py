@@ -18,23 +18,32 @@ DAILY_FILE = DASHBOARD_DIR / "main_data.csv"
 HOURLY_FILE = PROJECT_DIR / "data" / "data_2.csv"
 
 SEASON_LABELS = {
-    1: "Springer (1)",
-    2: "Summer (2)",
-    3: "Fall (3)",
-    4: "Winter (4)",
+    1: "Spring",
+    2: "Summer",
+    3: "Fall",
+    4: "Winter",
 }
 WEATHER_LABELS = {
-    1: "Cerah / sedikit awan (1)",
-    2: "Berkabut / berawan (2)",
-    3: "Hujan atau salju ringan (3)",
-    4: "Hujan lebat / salju / kabut (4)",
+    1: "Cerah / sedikit awan",
+    2: "Berkabut / berawan",
+    3: "Hujan atau salju ringan",
+    4: "Hujan lebat / salju / kabut",
 }
 WORKINGDAY_LABELS = {0: "Bukan hari kerja", 1: "Hari kerja"}
 
 
 @st.cache_data(show_spinner="Memuat dataset Bike Sharing...")
-def load_data(daily_path: str, hourly_path: str):
-    """Memuat data harian bersih dan data per jam dari folder proyek."""
+def load_data(
+    daily_path: str,
+    hourly_path: str,
+    daily_file_signature: tuple[int, int],
+    hourly_file_signature: tuple[int, int],
+):
+    """Memuat data dan mengikat cache ke versi fisik kedua file CSV.
+
+    Signature berisi waktu modifikasi (nanodetik) dan ukuran file. Nilainya
+    menjadi bagian dari cache key sehingga perubahan isi CSV memicu pembacaan ulang.
+    """
     daily = pd.read_csv(daily_path, parse_dates=["dteday"])
     hourly = pd.read_csv(hourly_path, parse_dates=["dteday"])
 
@@ -64,7 +73,14 @@ if missing_files:
     st.stop()
 
 try:
-    day_df, hour_df = load_data(str(DAILY_FILE), str(HOURLY_FILE))
+    daily_stat = DAILY_FILE.stat()
+    hourly_stat = HOURLY_FILE.stat()
+    day_df, hour_df = load_data(
+        str(DAILY_FILE),
+        str(HOURLY_FILE),
+        (daily_stat.st_mtime_ns, daily_stat.st_size),
+        (hourly_stat.st_mtime_ns, hourly_stat.st_size),
+    )
 except Exception as error:  # noqa: BLE001 - tampilkan penyebab yang membantu pengguna
     st.exception(error)
     st.stop()
@@ -80,7 +96,7 @@ day_type_options = list(WORKINGDAY_LABELS.values())
 
 selected_years = st.sidebar.multiselect("Tahun", year_options, default=year_options)
 selected_months = st.sidebar.multiselect("Bulan", month_options, default=month_options)
-selected_seasons = st.sidebar.multiselect("Musim (label mengikuti Readme.txt)", season_options, default=season_options)
+selected_seasons = st.sidebar.multiselect("Musim", season_options, default=season_options)
 selected_weather = st.sidebar.multiselect("Kondisi cuaca (analisis harian)", weather_options, default=weather_options)
 selected_day_types = st.sidebar.multiselect("Jenis hari", day_type_options, default=day_type_options)
 
@@ -235,7 +251,7 @@ with tab_context:
             x="season_label",
             y="avg_rentals",
             text_auto=".0f",
-            title="Rata-rata Penyewaan Harian per Kode Musim",
+            title="Rata-rata Penyewaan Harian per Musim",
             labels={"season_label": "Musim", "avg_rentals": "Rata-rata penyewaan / hari"},
         )
         fig_season.update_layout(xaxis_tickangle=-20, margin=dict(l=10, r=10, t=60, b=10))
@@ -253,7 +269,7 @@ with tab_context:
         st.plotly_chart(fig_weather, use_container_width=True)
 
     st.caption(
-        "Label kode musim dan cuaca mengikuti Readme.txt dataset. "
+        "Nama musim dan kondisi cuaca ditampilkan secara konsisten tanpa kode angka. "
         "Kategori yang tidak memiliki observasi pada data harian tidak ditampilkan."
     )
     with st.expander("Lihat tabel ringkasan kategori"):
