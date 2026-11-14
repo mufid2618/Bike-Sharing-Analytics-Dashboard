@@ -236,7 +236,7 @@ with tab_context:
             y="avg_rentals",
             text_auto=".0f",
             title="Rata-rata Penyewaan Harian per Kode Musim",
-            labels={"season_label": "Musim (kode README)", "avg_rentals": "Rata-rata penyewaan / hari"},
+            labels={"season_label": "Musim", "avg_rentals": "Rata-rata penyewaan / hari"},
         )
         fig_season.update_layout(xaxis_tickangle=-20, margin=dict(l=10, r=10, t=60, b=10))
         st.plotly_chart(fig_season, use_container_width=True)
